@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"go/ast"
 	"go/build"
@@ -98,6 +99,17 @@ func makeFilter(pkg *build.Package) func(fi os.FileInfo) bool {
 
 // ファイルごとにタイポを見つける
 func findTypoByFile(fset *token.FileSet, f *ast.File) ([]*Typo, error) {
-	fmt.Println(fset.Position(f.Pos()).Filename)
+	for _, cg := range f.Comments {
+		s := bufio.NewScanner(strings.NewReader(cg.Text()))
+		s.Split(bufio.ScanWords)
+		for s.Scan() {
+			fmt.Println(s.Text())
+		}
+
+		if err := s.Err(); err != nil {
+			return nil, err
+		}
+	}
+
 	return nil, nil
 }
