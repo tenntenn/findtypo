@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"go/ast"
 	"go/build"
 	"go/parser"
@@ -99,11 +98,30 @@ func makeFilter(pkg *build.Package) func(fi os.FileInfo) bool {
 
 // ファイルごとにタイポを見つける
 func findTypoByFile(fset *token.FileSet, f *ast.File) ([]*Typo, error) {
+	var typos []*Typo
+
 	for _, cg := range f.Comments {
 		s := bufio.NewScanner(strings.NewReader(cg.Text()))
 		s.Split(bufio.ScanWords)
 		for s.Scan() {
-			fmt.Println(s.Text())
+			str := strings.TrimRight(s.Text(), ".")
+			if typo, isTarget := hasTypo(str); typo && isTarget {
+
+				// 末尾のsを取り除いてもう一度やってみる
+				if strings.HasSuffix(str, "s") {
+					str = strings.TrimRight(str, "s")
+					if typo, isTarget := hasTypo(str); !typo && isTarget {
+						// sを取り除いたら大丈夫だった
+						continue
+					}
+				}
+
+				typos = append(typos, &Typo{
+					Text: s.Text(),
+					Pos:  fset.Position(cg.Pos()),
+				})
+			}
+
 		}
 
 		if err := s.Err(); err != nil {
@@ -111,5 +129,12 @@ func findTypoByFile(fset *token.FileSet, f *ast.File) ([]*Typo, error) {
 		}
 	}
 
-	return nil, nil
+	return typos, nil
+}
+
+func hasTypo(s string) (typo, target bool) {
+	if strings.HasSuffix(s, "s") {
+		return true, true
+	}
+	return false, true
 }
