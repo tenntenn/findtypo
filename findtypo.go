@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"go/ast"
 	"go/build"
 	"go/parser"
@@ -13,6 +12,8 @@ import (
 
 var (
 	ctx *build.Context
+	// パッケージ名とパッケージ情報のマップ
+	allPackage map[string][]*PkgInfo
 )
 
 func init() {
@@ -178,11 +179,21 @@ func getPkgIdent(expr ast.Expr) (pkg, ident string, ok bool) {
 }
 
 func isExistPkg(pkg string) bool {
-	fmt.Println("pkg:", pkg)
-	return true
+	_, ok := allPackage[pkg]
+	return ok
 }
 
 func isExitIdent(pkg, ident string) bool {
-	fmt.Println("ident:", ident)
-	return true
+	ps, ok := allPackage[pkg]
+	if !ok {
+		return false
+	}
+
+	for _, p := range ps {
+		if p.HasIdent(ident) {
+			return true
+		}
+	}
+
+	return false
 }
