@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"go/ast"
 	"go/build"
 	"go/parser"
@@ -133,8 +134,55 @@ func findTypoByFile(fset *token.FileSet, f *ast.File) ([]*Typo, error) {
 }
 
 func hasTypo(s string) (typo, target bool) {
-	if strings.HasSuffix(s, "s") {
-		return true, true
+	expr, err := parser.ParseExpr(s)
+	if err != nil {
+		return false, false
 	}
-	return false, true
+
+	pkg, ident, ok := getPkgIdent(expr)
+	if !ok {
+		return false, false
+	}
+
+	// パッケージが存在するか
+	if !isExistPkg(pkg) {
+		return false, false
+	}
+
+	// 識別子が存在するか
+	typo = !isExitIdent(pkg, ident)
+
+	return typo, true
+}
+
+// パッケージ名と識別子を取得する
+func getPkgIdent(expr ast.Expr) (pkg, ident string, ok bool) {
+	selExpr, ok := expr.(*ast.SelectorExpr)
+	if !ok {
+		return "", "", false
+	}
+
+	if !selExpr.Sel.IsExported() {
+		return "", "", false
+	}
+
+	pkgIdent, ok := selExpr.X.(*ast.Ident)
+	if !ok {
+		return "", "", false
+	}
+
+	pkg = pkgIdent.Name
+	ident = selExpr.Sel.Name
+
+	return pkg, ident, true
+}
+
+func isExistPkg(pkg string) bool {
+	fmt.Println("pkg:", pkg)
+	return true
+}
+
+func isExitIdent(pkg, ident string) bool {
+	fmt.Println("ident:", ident)
+	return true
 }
